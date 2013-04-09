@@ -32,13 +32,18 @@ class Frame {
             }
             json.putObject("headers", jHeaders);
         }
-        json.putString("body", body);
+        if (body != null && body.length() > 2 && body.charAt(0) == '\0' && body.charAt(1) == '\f') {
+            json.putBinary("body", body.getBytes());
+        } else {
+            json.putString("body", body);
+        }
 
         return json;
     }
 
     /**
      * Unmarshall a single STOMP frame from a `data` string
+     * TODO: unescape
      */
     static Frame unmarshall(String data) {
         // search for 2 consecutives LF byte to split the command
@@ -70,7 +75,7 @@ class Frame {
             int len = Integer.parseInt(headers.get("content-length"));
             body = data.substring(start, start + len);
         } else {
-            int end = -1;
+            int end = data.length();
 
             for (int i = start; i < end; i++) {
                 if (data.charAt(i) == '\0') {
@@ -79,9 +84,7 @@ class Frame {
                 }
             }
 
-            if (end != -1) {
-                body = data.substring(start, end);
-            }
+            body = data.substring(start, end);
         }
         return new Frame(command, headers, body);
     }

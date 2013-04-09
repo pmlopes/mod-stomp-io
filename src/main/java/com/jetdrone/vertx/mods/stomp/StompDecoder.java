@@ -10,6 +10,13 @@ import java.nio.charset.Charset;
 
 public class StompDecoder extends ReplayingDecoder<Void> {
 
+    private static final ByteBufIndexFinder NULEOL = new ByteBufIndexFinder() {
+        @Override
+        public boolean find(ByteBuf buffer, int guessedIndex) {
+            return guessedIndex != 0 && buffer.getByte(guessedIndex - 1) == 0 && buffer.getByte(guessedIndex) == '\n';
+        }
+    };
+
     @Override
     public void checkpoint() {
         if (internalBuffer() != null) {
@@ -18,7 +25,7 @@ public class StompDecoder extends ReplayingDecoder<Void> {
     }
 
     public Frame receive(ByteBuf in) throws IOException {
-        String frame = in.readBytes(in.bytesBefore(ByteBufIndexFinder.NUL)).toString(Charset.forName("UTF-8"));
+        String frame = in.readBytes(in.bytesBefore(NULEOL)).toString(Charset.forName("UTF-8"));
         in.skipBytes(1);
         return Frame.unmarshall(frame);
     }

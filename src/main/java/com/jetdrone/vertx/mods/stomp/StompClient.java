@@ -209,6 +209,7 @@ public class StompClient {
 
             @Override
             public void handle(Buffer buffer) {
+                System.out.println("<<<" + buffer.toString("UTF-8").replaceAll("\0", "^@"));
                 serverActivity = System.currentTimeMillis();
                 // Should only get one callback at a time, no sychronization necessary
                 ByteBuf byteBuf = buffer.getByteBuf();

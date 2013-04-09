@@ -63,6 +63,7 @@ public class StompClientBusMod extends BusModBase implements Handler<Message<Jso
 
         final Frame frame = new Frame(command);
         String id;
+        JsonObject headers;
 
         try {
             switch (command) {
@@ -74,7 +75,7 @@ public class StompClientBusMod extends BusModBase implements Handler<Message<Jso
                     frame.headers.put("destination", getRequiredField("destination", message));
                     frame.headers.put("transaction", message.body.getString("transaction"));
                     // add user defined headers
-                    JsonObject headers = message.body.getObject("headers");
+                    headers = message.body.getObject("headers");
                     if (headers != null) {
                         for (String header : headers.getFieldNames()) {
                             frame.headers.put(header, headers.getString(header));
@@ -119,6 +120,14 @@ public class StompClientBusMod extends BusModBase implements Handler<Message<Jso
                     frame.headers.put("id", id);
                     frame.headers.put("destination", destination);
                     frame.headers.put("ack", message.body.getString("ack", "auto"));
+
+                    // add user defined headers
+                    headers = message.body.getObject("headers");
+                    if (headers != null) {
+                        for (String header : headers.getFieldNames()) {
+                            frame.headers.put(header, headers.getString(header));
+                        }
+                    }
 
                     // compose the listening address as base + destination
                     final String vertxChannel = baseAddress + destination;
