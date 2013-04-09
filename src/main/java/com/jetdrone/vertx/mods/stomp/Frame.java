@@ -41,6 +41,16 @@ class Frame {
         return json;
     }
 
+    // http://stomp.github.io/stomp-specification-1.2.html
+
+    private String escape(String value) {
+        return null;
+    }
+
+    private String unescape(String value) {
+        return null;
+    }
+
     /**
      * Unmarshall a single STOMP frame from a `data` string
      * TODO: unescape
