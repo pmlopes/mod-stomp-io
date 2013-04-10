@@ -48,7 +48,12 @@ public class StompClientBusMod extends BusModBase implements Handler<Message<Jso
 
     @Override
     public void stop() {
-        stompClient.send(new Frame("DISCONNECT"), null);
+        stompClient.send(new Frame("DISCONNECT"), true, new Handler<Frame>() {
+            @Override
+            public void handle(Frame event) {
+                // NOOP
+            }
+        });
     }
 
     @Override
@@ -62,7 +67,6 @@ public class StompClientBusMod extends BusModBase implements Handler<Message<Jso
         }
 
         final Frame frame = new Frame(command);
-        String id;
         JsonObject headers;
 
         try {
@@ -99,7 +103,7 @@ public class StompClientBusMod extends BusModBase implements Handler<Message<Jso
                     if (sync) {
                         // if receipt is present a RECEIPT frame is returned, else nothing is
                         frame.headers.put("receipt", generateID());
-                        stompClient.send(frame, new Handler<Frame>() {
+                        stompClient.send(frame, false, new Handler<Frame>() {
                             @Override
                             public void handle(Frame frame) {
                                 // should also include the id in the response
@@ -108,16 +112,20 @@ public class StompClientBusMod extends BusModBase implements Handler<Message<Jso
                         });
 
                     } else {
-                        stompClient.send(frame, null);
-                        sendOK(message, null);
+                        stompClient.send(frame, true, new Handler<Frame>() {
+                            @Override
+                            public void handle(Frame event) {
+                                sendOK(message, null);
+                            }
+                        });
                     }
                     break;
                 case "subscribe":
                     // for convenience if the `id` header is not set, we create a new one for this client
                     // that will be returned to be able to unsubscribe this subscription
-                    id = message.body.getString("id", generateID());
+                    final String subscribeId = message.body.getString("id", generateID());
                     String destination = getRequiredField("destination", message);
-                    frame.headers.put("id", id);
+                    frame.headers.put("id", subscribeId);
                     frame.headers.put("destination", destination);
                     frame.headers.put("ack", message.body.getString("ack", "auto"));
 
@@ -131,7 +139,7 @@ public class StompClientBusMod extends BusModBase implements Handler<Message<Jso
 
                     // compose the listening address as base + destination
                     final String vertxChannel = baseAddress + destination;
-                    stompSubscriptions.registerSubscribeHandler(id, new Handler<Frame>() {
+                    stompSubscriptions.registerSubscribeHandler(subscribeId, new Handler<Frame>() {
                         @Override
                         public void handle(Frame reply) {
                             JsonObject replyMessage = new JsonObject();
@@ -141,36 +149,56 @@ public class StompClientBusMod extends BusModBase implements Handler<Message<Jso
                         }
                     });
 
-                    stompClient.send(frame, null);
-                    sendOK(message, new JsonObject().putString("id", id));
+                    stompClient.send(frame, true, new Handler<Frame>() {
+                        @Override
+                        public void handle(Frame event) {
+                            sendOK(message, new JsonObject().putString("id", subscribeId));
+                        }
+                    });
                     break;
                 case "unsubscribe":
-                    id = getRequiredField("id", message);
-                    frame.headers.put("id", id);
-                    stompClient.send(frame, null);
-                    stompSubscriptions.unregisterSubscribeHandler(id);
-                    sendOK(message);
+                    final String unsubscribeId = getRequiredField("id", message);
+                    frame.headers.put("id", unsubscribeId);
+                    stompClient.send(frame, true, new Handler<Frame>() {
+                        @Override
+                        public void handle(Frame event) {
+                            stompSubscriptions.unregisterSubscribeHandler(unsubscribeId);
+                            sendOK(message);
+                        }
+                    });
                     break;
                 case "ack":
                 case "nack":
                     frame.headers.put("id", getRequiredField("id", message));
                     frame.headers.put("transaction", message.body.getString("transaction"));
 
-                    stompClient.send(frame, null);
-                    sendOK(message, null);
+                    stompClient.send(frame, true, new Handler<Frame>() {
+                        @Override
+                        public void handle(Frame event) {
+                            sendOK(message, null);
+                        }
+                    });
                     break;
                 case "begin":
                     // for convenience if the `transaction` header is not set, we create a new one for this client
                     // that will be returned to be able to commit/abort/send this tx
                     frame.headers.put("transaction", message.body.getString("transaction", generateID()));
-                    stompClient.send(frame, null);
-                    sendOK(message, new JsonObject().putString("transaction", frame.headers.get("transaction")));
+                    stompClient.send(frame, true, new Handler<Frame>() {
+                        @Override
+                        public void handle(Frame event) {
+                            sendOK(message, new JsonObject().putString("transaction", frame.headers.get("transaction")));
+                        }
+                    });
                     break;
                 case "commit":
                 case "abort":
                     frame.headers.put("transaction", getRequiredField("transaction", message));
-                    stompClient.send(frame, null);
-                    sendOK(message, null);
+                    stompClient.send(frame, true, new Handler<Frame>() {
+                        @Override
+                        public void handle(Frame event) {
+                            sendOK(message, null);
+                        }
+                    });
                     break;
                 default:
                     sendError(message, "Invalid command: " + command);

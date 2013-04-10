@@ -40,6 +40,8 @@ public class StompClient {
         }
     }
 
+    private static final Frame ASYNCFRAME = new Frame("ASYNC");
+
     private final Heartbeat heartbeat = new Heartbeat();
     private final Queue<Handler<Frame>> replies = new LinkedList<>();
     private final StompSubscriptions subscriptions;
@@ -141,7 +143,7 @@ public class StompClient {
         }
     }
 
-    void send(final Frame frame, final Handler<Frame> replyHandler) {
+    void send(final Frame frame, final boolean async, final Handler<Frame> replyHandler) {
         switch (state) {
             case CONNECTED:
                 netSocket.write(frame.command);
@@ -152,7 +154,7 @@ public class StompClient {
                     if (value != null) {
                         netSocket.write(entry.getKey());
                         netSocket.write(":");
-                        netSocket.write(entry.getValue());
+                        netSocket.write(Frame.escape(entry.getValue()));
                         netSocket.write("\n");
                     }
                 }
@@ -169,7 +171,9 @@ public class StompClient {
                 }
 
                 netSocket.write("\0");
-                if (replyHandler != null) {
+                if (async) {
+                    replyHandler.handle(ASYNCFRAME);
+                } else {
                     replies.offer(replyHandler);
                 }
                 break;
@@ -178,9 +182,11 @@ public class StompClient {
                 connect(new AsyncResultHandler<Void>() {
                     public void handle(AsyncResult<Void> connection) {
                         if (connection.succeeded()) {
-                            send(frame, replyHandler);
+                            send(frame, async, replyHandler);
                         } else {
-                            replyHandler.handle(new Frame("ERROR", null, "Unable to connect"));
+                            Frame error = new Frame("ERROR");
+                            error.body = "Unable to connect";
+                            replyHandler.handle(error);
                         }
                     }
                 });
@@ -189,7 +195,7 @@ public class StompClient {
                 logger.debug("Got send request while connecting. Will try again in a while.");
                 vertx.setTimer(100, new Handler<Long>() {
                     public void handle(Long event) {
-                        send(frame, replyHandler);
+                        send(frame, async, replyHandler);
                     }
                 });
         }
@@ -209,21 +215,12 @@ public class StompClient {
 
             @Override
             public void handle(Buffer buffer) {
-                System.out.println("<<<" + buffer.toString("UTF-8").replaceAll("\0", "^@"));
+//                System.out.println("<<<" + buffer.toString("UTF-8").replaceAll("\0", "^@"));
                 serverActivity = System.currentTimeMillis();
                 // Should only get one callback at a time, no sychronization necessary
                 ByteBuf byteBuf = buffer.getByteBuf();
 
-                if (read == null) {
-                    // PONG
-                    while (byteBuf.isReadable() && byteBuf.getByte(byteBuf.readerIndex()) == '\n') {
-                        byteBuf.skipBytes(1);
-                    }
-
-                    if (!byteBuf.isReadable()) {
-                        return;
-                    }
-                } else {
+                if (read != null) {
                     // Merge the new buffer with the previous buffer
                     byteBuf = Unpooled.copiedBuffer(read, byteBuf);
                     read = null;
@@ -243,7 +240,6 @@ public class StompClient {
                     logger.error("Error receiving data", e);
                     disconnect();
                 } catch (IndexOutOfBoundsException th) {
-                    th.printStackTrace();
                     // Got to catch decoding fails and try it again
                     byteBuf.resetReaderIndex();
                     read = Unpooled.copiedBuffer(byteBuf);
@@ -252,18 +248,18 @@ public class StompClient {
         });
         // perform the connect command
         logger.debug("Socket Opened...");
-        Map<String, String> headers = new HashMap<>();
-        headers.put("accept-version", getSupportedVersions());
-        headers.put("heart-beat", heartbeat.toString());
-        headers.put("vhost", host);
+        Frame connect = new Frame("CONNECT");
+        connect.putHeader("accept-version", getSupportedVersions());
+        connect.putHeader("heart-beat", heartbeat.toString());
+        connect.putHeader("vhost", host);
         if (login != null) {
-            headers.put("login", login);
+            connect.putHeader("login", login);
         }
         if (passcode != null) {
-            headers.put("passcode", passcode);
+            connect.putHeader("passcode", passcode);
         }
 
-        send(new Frame("CONNECT", headers, null), new Handler<Frame>() {
+        send(connect, false, new Handler<Frame>() {
             @Override
             public void handle(Frame frame) {
                 logger.debug("connected to server " + frame.headers.get("server"));
@@ -339,6 +335,8 @@ public class StompClient {
             }
 
         }
+
+        System.out.println(reply.toJSON());
 
         throw new IOException("Received a non MESSAGE while in SUBSCRIBE mode");
     }

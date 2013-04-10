@@ -99,9 +99,15 @@ class GStompClientTest extends TestVerticle {
             stomp([command: "subscribe", destination: "/queue/unsub"]) { reply1 ->
                 def id = reply1.body.getString("id")
 
-                stomp([command: "unsubscribe", id: id]) { reply2 ->
-                    testComplete()
-                }
+                // sleep 1 second to avoid receiving any old intransit messages
+                vertx.setTimer(1000, new Handler<Long>() {
+                    @Override
+                    public void handle(Long event) {
+                        stomp([command: "unsubscribe", id: id]) { reply2 ->
+                            testComplete()
+                        }
+                    }
+                });
             }
         }
     }
