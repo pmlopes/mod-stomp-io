@@ -86,39 +86,34 @@ public class StompClient {
         if (state == State.DISCONNECTED) {
             state = State.CONNECTING;
             NetClient client = vertx.createNetClient();
-            client.exceptionHandler(new Handler<Exception>() {
-                public void handle(Exception e) {
-                    logger.error("Net client error", e);
-                    if (resultHandler != null) {
-                        AsyncResult<Void> asyncResult = new AsyncResult<>();
-                        asyncResult.setFailure(e);
-                        resultHandler.handle(asyncResult);
-                    }
-                    disconnect();
-                }
-            });
-            client.connect(port, host, new Handler<org.vertx.java.core.net.NetSocket>() {
+            client.connect(port, host, new AsyncResultHandler<NetSocket>() {
                 @Override
-                public void handle(org.vertx.java.core.net.NetSocket socket) {
-                    state = State.CONNECTED;
-                    netSocket = socket;
-                    init(netSocket);
-                    socket.exceptionHandler(new Handler<Exception>() {
-                        public void handle(Exception e) {
-                            logger.error("Socket client error", e);
-                            disconnect();
+                public void handle(AsyncResult<NetSocket> asyncResult) {
+                    if (asyncResult.failed()) {
+                        logger.error("Net client error", asyncResult.cause());
+                        if (resultHandler != null) {
+                            resultHandler.handle(new FutureAsyncResult<Void>(asyncResult.cause(), null));
                         }
-                    });
-                    socket.closedHandler(new Handler<Void>() {
-                        public void handle(Void arg0) {
-                            logger.info("Socket closed");
-                            disconnect();
+                        disconnect();
+                    } else {
+                        state = State.CONNECTED;
+                        netSocket = asyncResult.result();
+                        init(netSocket);
+                        netSocket.exceptionHandler(new Handler<Throwable>() {
+                            public void handle(Throwable e) {
+                                logger.error("Socket client error", e);
+                                disconnect();
+                            }
+                        });
+                        netSocket.closeHandler(new Handler<Void>() {
+                            public void handle(Void arg0) {
+                                logger.info("Socket closed");
+                                disconnect();
+                            }
+                        });
+                        if (resultHandler != null) {
+                            resultHandler.handle(new FutureAsyncResult<Void>(null, null));
                         }
-                    });
-                    if (resultHandler != null) {
-                        AsyncResult<Void> asyncResult = new AsyncResult<>();
-                        asyncResult.setResult(null);
-                        resultHandler.handle(asyncResult);
                     }
                 }
             });

@@ -1,7 +1,7 @@
 package com.jetdrone.vertx.mods.stomp
 
 import org.junit.Test
-import org.vertx.java.core.Handler
+import org.vertx.java.core.*
 import org.vertx.java.core.eventbus.EventBus
 import org.vertx.java.core.eventbus.Message
 import org.vertx.java.core.json.JsonObject
@@ -24,8 +24,8 @@ class GStompClientTest extends TestVerticle {
 
         config.putString("address", address)
 
-        container.deployModule(System.getProperty("vertx.modulename"), config, 1, new Handler<String>() {
-            public void handle(String res) {
+        container.deployModule(System.getProperty("vertx.modulename"), config, 1, new AsyncResultHandler<String>() {
+            public void handle(AsyncResult<String> res) {
                 appReady()
             }
         })

@@ -21,7 +21,7 @@ public class StompClientBusMod extends BusModBase implements Handler<Message<Jso
     }
 
     private static String getRequiredField(String name, Message<JsonObject> msg) throws StompFrameException {
-        String field = msg.body.getString(name);
+        String field = msg.body().getString(name);
         if (field == null) {
             throw new StompFrameException("Field: <" + name + "> is required!");
         }
@@ -59,7 +59,7 @@ public class StompClientBusMod extends BusModBase implements Handler<Message<Jso
     @Override
     public void handle(final Message<JsonObject> message) {
 
-        String command = message.body.getString("command");
+        String command = message.body().getString("command");
 
         if (command == null) {
             sendError(message, "command must be specified");
@@ -77,16 +77,16 @@ public class StompClientBusMod extends BusModBase implements Handler<Message<Jso
                     break;
                 case "send":
                     frame.headers.put("destination", getRequiredField("destination", message));
-                    frame.headers.put("transaction", message.body.getString("transaction"));
+                    frame.headers.put("transaction", message.body().getString("transaction"));
                     // add user defined headers
-                    headers = message.body.getObject("headers");
+                    headers = message.body().getObject("headers");
                     if (headers != null) {
                         for (String header : headers.getFieldNames()) {
                             frame.headers.put(header, headers.getString(header));
                         }
                     }
 
-                    Object body = message.body.getField("body");
+                    Object body = message.body().getField("body");
 
                     if (body != null) {
                         if (body instanceof String) {
@@ -99,7 +99,7 @@ public class StompClientBusMod extends BusModBase implements Handler<Message<Jso
                         }
                     }
 
-                    boolean sync = message.body.getBoolean("sync", false);
+                    boolean sync = message.body().getBoolean("sync", false);
                     if (sync) {
                         // if receipt is present a RECEIPT frame is returned, else nothing is
                         frame.headers.put("receipt", generateID());
@@ -123,14 +123,14 @@ public class StompClientBusMod extends BusModBase implements Handler<Message<Jso
                 case "subscribe":
                     // for convenience if the `id` header is not set, we create a new one for this client
                     // that will be returned to be able to unsubscribe this subscription
-                    final String subscribeId = message.body.getString("id", generateID());
+                    final String subscribeId = message.body().getString("id", generateID());
                     String destination = getRequiredField("destination", message);
                     frame.headers.put("id", subscribeId);
                     frame.headers.put("destination", destination);
-                    frame.headers.put("ack", message.body.getString("ack", "auto"));
+                    frame.headers.put("ack", message.body().getString("ack", "auto"));
 
                     // add user defined headers
-                    headers = message.body.getObject("headers");
+                    headers = message.body().getObject("headers");
                     if (headers != null) {
                         for (String header : headers.getFieldNames()) {
                             frame.headers.put(header, headers.getString(header));
@@ -170,7 +170,7 @@ public class StompClientBusMod extends BusModBase implements Handler<Message<Jso
                 case "ack":
                 case "nack":
                     frame.headers.put("id", getRequiredField("id", message));
-                    frame.headers.put("transaction", message.body.getString("transaction"));
+                    frame.headers.put("transaction", message.body().getString("transaction"));
 
                     stompClient.send(frame, true, new Handler<Frame>() {
                         @Override
@@ -182,7 +182,7 @@ public class StompClientBusMod extends BusModBase implements Handler<Message<Jso
                 case "begin":
                     // for convenience if the `transaction` header is not set, we create a new one for this client
                     // that will be returned to be able to commit/abort/send this tx
-                    frame.headers.put("transaction", message.body.getString("transaction", generateID()));
+                    frame.headers.put("transaction", message.body().getString("transaction", generateID()));
                     stompClient.send(frame, true, new Handler<Frame>() {
                         @Override
                         public void handle(Frame event) {
