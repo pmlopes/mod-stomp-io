@@ -1,7 +1,9 @@
-# Vert.x Gradle Template
+Stomp busmod for Vert.x
+=============================
 
-Template project for creating a Vert.x module with a Gradle build.
+This module allows communcation between Message brokers such as ActiveMQ, RabbitMQ Apache Apollo.
 
-Clone this and adapt it to easily develop Vert.x modules using Gradle as your build tool.
+Support the development of this module
+--------------------------------------
 
-See the [build script](build.gradle) for the list of useful tasks
+[![Click here to lend your support to: Support com.jetdrone Vert.x modules and make a donation at www.pledgie.com !](http://www.pledgie.com/campaigns/19785.png?skin_name=chrome)](http://www.pledgie.com/campaigns/19785)
