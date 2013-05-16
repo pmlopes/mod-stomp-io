@@ -53,7 +53,7 @@ dependencies {
 
   // If you're creating Groovy compiled verticles you may need the following dependencies
   provided "org.codehaus.groovy:groovy-all:$groovyVersion"
-  provided "io.vertx:lang-groovy:$groovyLangModVersion@jar"
+//  provided "io.vertx:lang-groovy:$groovyLangModVersion@jar"
   testCompile "org.apache.activemq:activemq-core:5.7.0"
 
 }
@@ -72,6 +72,7 @@ Please edit the details below.
  */
 def configurePom(def pom) {
 pom.project {
+    name 'mod-stomp-io'
     description 'Asynchronous STOMP bus module for Vert.x'
     inceptionYear '2013'
     packaging 'zip'

@@ -2,12 +2,10 @@ package com.jetdrone.vertx.mods.stomp;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufIndexFinder;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.ReplayingDecoder;
 
 import java.nio.charset.Charset;
 
-public class StompDecoder extends ReplayingDecoder<Void> {
+public class StompDecoder {
 
     static final Charset UTF8 = Charset.forName("UTF-8");
 
@@ -18,13 +16,6 @@ public class StompDecoder extends ReplayingDecoder<Void> {
     }
 
     State state = State.EOF;
-
-    @Override
-    public void checkpoint() {
-        if (internalBuffer() != null) {
-            super.checkpoint();
-        }
-    }
 
     public Frame receive(ByteBuf in) {
 
@@ -101,10 +92,5 @@ public class StompDecoder extends ReplayingDecoder<Void> {
 
         //System.out.println("Parse complete!");
         return frame;
-    }
-
-    @Override
-    protected Object decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
-        return receive(in);
     }
 }
