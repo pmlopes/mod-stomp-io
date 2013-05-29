@@ -1,3 +1,11 @@
 {
   "main":"com.jetdrone.vertx.mods.stomp.StompClientBusMod"
+
+  "description": "Asynchronous STOMP bus module for Vert.x",
+  "licenses": ["The Apache Software License Version 2.0"],
+  "author": "Paulo Lopes <pmlopes@gmail.com>",
+
+  "developers": ["pmlopes"],
+  "keywords": ["stomp", "eventbus", "connector", "client", "asynchronous", "activemq", "amq", "rabbitmq"],
+  "homepage": "https://github.com/pmlopes/mod-stomp-io"
 }
