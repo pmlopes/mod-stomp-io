@@ -88,11 +88,32 @@ public class StompClient {
             NetClient client = vertx.createNetClient();
             client.connect(port, host, new AsyncResultHandler<NetSocket>() {
                 @Override
-                public void handle(AsyncResult<NetSocket> asyncResult) {
+                public void handle(final AsyncResult<NetSocket> asyncResult) {
                     if (asyncResult.failed()) {
                         logger.error("Net client error", asyncResult.cause());
                         if (resultHandler != null) {
-                            resultHandler.handle(new FutureAsyncResult<Void>(asyncResult.cause(), null));
+                            resultHandler.handle(new AsyncResult<Void>() {
+
+                                @Override
+                                public Void result() {
+                                    return null;
+                                }
+
+                                @Override
+                                public Throwable cause() {
+                                    return asyncResult.cause();
+                                }
+
+                                @Override
+                                public boolean succeeded() {
+                                    return asyncResult.succeeded();
+                                }
+
+                                @Override
+                                public boolean failed() {
+                                    return asyncResult.failed();
+                                }
+                            });
                         }
                         disconnect();
                     } else {
@@ -112,7 +133,28 @@ public class StompClient {
                             }
                         });
                         if (resultHandler != null) {
-                            resultHandler.handle(new FutureAsyncResult<Void>(null, null));
+                            resultHandler.handle(new AsyncResult<Void>() {
+
+                                @Override
+                                public Void result() {
+                                    return null;
+                                }
+
+                                @Override
+                                public Throwable cause() {
+                                    return null;
+                                }
+
+                                @Override
+                                public boolean succeeded() {
+                                    return true;
+                                }
+
+                                @Override
+                                public boolean failed() {
+                                    return false;
+                                }
+                            });
                         }
                     }
                 }

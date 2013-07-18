@@ -1,7 +1,6 @@
 package com.jetdrone.vertx.mods.stomp;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufIndexFinder;
 
 import java.nio.charset.Charset;
 
@@ -24,7 +23,7 @@ public class StompDecoder {
         while(in.isReadable()) {
             switch (state) {
                 case HEADERS:
-                    ByteBuf linebuf = in.readBytes(in.bytesBefore(ByteBufIndexFinder.LF));
+                    ByteBuf linebuf = in.readBytes(in.bytesBefore((byte) '\n'));
                     // skip LF
                     in.skipBytes(1);
 
@@ -63,7 +62,7 @@ public class StompDecoder {
                     //System.out.println("Content-Length: " + read);
 
                     if (read == -1) {
-                        body = in.readBytes(in.bytesBefore(ByteBufIndexFinder.NUL));
+                        body = in.readBytes(in.bytesBefore((byte) '\0'));
                     } else {
                         body = in.readBytes(read);
                     }
