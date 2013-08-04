@@ -17,6 +17,13 @@ First deploy the module:
     eb = vertx.eventBus()
     container.deployModule('com.jetdrone~mod-stomp-io~1.0.0', [address: 'my-address'], 1)
 
+The config json accepts the following optional parameters:
+
+* "host" default: "localhost"
+* "port" default 61613
+* "login" default null
+* "passcode" default: null
+
 Second send/receive messages:
 
     eb.send(address, [command: "send", destination: "/queue/FOO.BAR", body: "Hello, queue FOO.BAR"]) { reply ->
