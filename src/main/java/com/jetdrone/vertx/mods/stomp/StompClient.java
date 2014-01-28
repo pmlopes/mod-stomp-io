@@ -348,6 +348,10 @@ public class StompClient {
     }
 
     void handleReply(Frame reply) throws IOException {
+        // Handles Pong
+        if( reply == null ) return;
+
+
         if ("ERROR".equals(reply.command)) {
             logger.error(reply.body);
             disconnect();
