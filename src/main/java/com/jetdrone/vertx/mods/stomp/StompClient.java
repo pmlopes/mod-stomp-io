@@ -40,7 +40,7 @@ public class StompClient {
         }
     }
 
-    private static final Frame ASYNCFRAME = new Frame("ASYNC");
+    private static final Frame ASYNC_FRAME = new Frame("ASYNC");
 
     private final Heartbeat heartbeat = new Heartbeat();
     private final Queue<Handler<Frame>> replies = new LinkedList<>();
@@ -209,7 +209,7 @@ public class StompClient {
 
                 netSocket.write("\0");
                 if (async) {
-                    replyHandler.handle(ASYNCFRAME);
+                    replyHandler.handle(ASYNC_FRAME);
                 } else {
                     replies.offer(replyHandler);
                 }
