@@ -33,36 +33,66 @@ public class FrameParser implements Handler<Buffer> {
         while (bytesRemaining() > 0) {
             switch (state) {
                 case HEADERS:
-                    end = packetEndOffset();
+                    end = packetEndOffset((byte) '\n');
                     start = _offset;
 
                     // include the delimiter
                     _offset = end + 1;
 
-                    if (end > _buffer.length()) {
-                        _offset = start;
-                        throw new ArrayIndexOutOfBoundsException("Wait for more data.");
-                    }
-
                     String line = _buffer.getString(start, end, _encoding);
 
-                    if (frame == null) {
-                        //System.out.println("Received command: " + line);
-                        frame = new Frame(line);
-                    } else {
-                        //System.out.println("Received header: " + line);
-                        // add header
-                        int idx = line.indexOf(":");
+                    if (line.length() > 0) {
+                        if (frame == null) {
+                            //System.out.println("Received command: " + line);
+                            frame = new Frame(line);
+                        } else {
+                            //System.out.println("Received header: " + line);
+                            // add header
+                            int idx = line.indexOf(":");
 
-                        String key = line.substring(0, idx);
-                        String value = line.substring(idx + 1);
-                        // utility function to trim any whitespace before and after a string
-                        key = key.replaceAll("^\\s+|\\s+$", "");
-                        value = value.replaceAll("^\\s+|\\s+$", "");
-                        frame.parseHeader(key, value);
+                            String key = line.substring(0, idx);
+                            String value = line.substring(idx + 1);
+                            // utility function to trim any whitespace before and after a string
+                            key = key.replaceAll("^\\s+|\\s+$", "");
+                            value = value.replaceAll("^\\s+|\\s+$", "");
+                            frame.parseHeader(key, value);
+                        }
+                    } else {
+                        if (frame != null) {
+                            state = State.BODY;
+                        }
                     }
 
-                    state = State.BODY;
+                    break;
+                case BODY:
+                    String contentLength = frame.headers.get("content-length");
+                    int read = -1;
+
+                    if (contentLength != null) {
+                        read = Integer.parseInt(contentLength);
+                    }
+
+                    String body;
+
+                    //System.out.println("Content-Length: " + read);
+
+                    if (read == -1) {
+                        end = packetEndOffset((byte) '\0');
+                        start = _offset;
+                    } else {
+                        start = _offset;
+                        end = start + read;
+                    }
+
+                    body = _buffer.getString(start, end, _encoding);
+
+                    // include the delimiter
+                    _offset = end + 1;
+
+                    frame.body = body;
+
+                    //System.out.println("Read body: " + frame.body);
+                    state = State.EOF;
                     break;
                 case EOF:
                     if (read() == '\n') {
@@ -237,7 +267,7 @@ public class FrameParser implements Handler<Buffer> {
     }
 
     private int parsePacketSize() throws ArrayIndexOutOfBoundsException {
-        int end = packetEndOffset();
+        int end = packetEndOffset((byte) '\n');
         String value = _buffer.getString(_offset, end - 1, _encoding);
 
         _offset = end + 1;
@@ -254,14 +284,14 @@ public class FrameParser implements Handler<Buffer> {
         return (int) size;
     }
 
-    private int packetEndOffset() throws ArrayIndexOutOfBoundsException {
+    private int packetEndOffset(byte delim) throws ArrayIndexOutOfBoundsException {
         int offset = _offset;
 
-        while (_buffer.getByte(offset) != '\n') {
+        while (_buffer.getByte(offset) != delim) {
             offset++;
 
             if (offset >= _buffer.length()) {
-                throw new ArrayIndexOutOfBoundsException("didn't see LF");
+                throw new ArrayIndexOutOfBoundsException("didn't see delimiter");
             }
         }
 
