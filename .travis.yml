@@ -4,3 +4,8 @@ jdk:
   - oraclejdk7
 services: rabbitmq
 env: TRAVISCI=1
+before_script:
+  - sh -c "if [ '$STOMP_PROVIDER' = 'rabbitmq' ]; then
+             sudo rabbitmq-plugins enable rabbitmq_stomp;
+             sudo service rabbitmq-server start;
+           fi"
