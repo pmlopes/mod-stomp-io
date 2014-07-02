@@ -19,11 +19,16 @@ public class StompDecoder {
     public Frame receive(ByteBuf in) {
 
         Frame frame = null;
+        int pos;
 
         while(in.isReadable()) {
             switch (state) {
                 case HEADERS:
-                    ByteBuf linebuf = in.readBytes(in.bytesBefore((byte) '\n'));
+                    pos = in.bytesBefore((byte) '\n');
+                    if (pos == -1) {
+                        throw new IndexOutOfBoundsException();
+                    }
+                    ByteBuf linebuf = in.readBytes(pos);
                     // skip LF
                     in.skipBytes(1);
 
@@ -62,7 +67,11 @@ public class StompDecoder {
                     //System.out.println("Content-Length: " + read);
 
                     if (read == -1) {
-                        body = in.readBytes(in.bytesBefore((byte) '\0'));
+                        pos = in.bytesBefore((byte) '\0');
+                        if (pos == -1) {
+                            throw new IndexOutOfBoundsException();
+                        }
+                        body = in.readBytes(pos);
                     } else {
                         body = in.readBytes(read);
                     }
