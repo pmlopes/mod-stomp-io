@@ -3,9 +3,16 @@ jdk:
   - openjdk7
   - oraclejdk7
 services: rabbitmq
-env: TRAVISCI=1
 before_install:
   - sudo /etc/init.d/rabbitmq-server stop
   - sudo rabbitmq-plugins list
   - sudo rabbitmq-plugins enable rabbitmq_stomp
   - sudo /etc/init.d/rabbitmq-server start
+install: true
+script:
+  - TERM=dumb ./gradlew check uploadArchives
+env:
+  global:
+    - secure: "dDxDBHqsT0dlJ3HzCTo/SCyiwNtvnW2YkclfUOrHDawluwdvmt8M9sv0y5+ACoA7gGz0mw1oFZRoT0ct34SUokk+W7EmGHy2NUxSL1yZGdwroPb+9l1rB8cIzqGjtgvUv9hIwS5qQ4ZLMFBk7xiMAextZrjJwBo5j7s00C4tEnM="
+    - secure: "cNBgvuUXFmfs+B6ds7LalaGsTv1aPZeVrGu6lYUyKy0NvtnBpq+lTj83Sl2aUR0aPqLBXkvGvBBXl6+MyOtseFAU1ZjSX33VLnchfpG3GSipOIIwgZRslMFAbq2M/3ischXhb/pfgbNmM3BSoA7DwPNkFkuX+M/KmfnTxS0JJ/k="
+

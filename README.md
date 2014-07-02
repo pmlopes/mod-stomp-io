@@ -1,6 +1,8 @@
 Stomp busmod for Vert.x
 =============================
 
+[![Build Status](https://travis-ci.org/pmlopes/mod-stomp-io.svg?branch=master)](https://travis-ci.org/pmlopes/mod-stomp-io)
+
 This module allows communcation between Message brokers such as ActiveMQ, RabbitMQ Apache Apollo.
 
 Support the development of this module
