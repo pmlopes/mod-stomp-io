@@ -1,7 +1,7 @@
 package com.jetdrone.vertx.mods.stomp;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import com.jetdrone.vertx.mods.stomp.impl.FrameHandler;
+import com.jetdrone.vertx.mods.stomp.impl.StompSubscriptions;
 import org.vertx.java.core.buffer.Buffer;
 import org.vertx.java.core.net.NetSocket;
 import org.vertx.java.core.AsyncResult;
@@ -11,15 +11,14 @@ import org.vertx.java.core.Vertx;
 import org.vertx.java.core.logging.Logger;
 import org.vertx.java.core.net.NetClient;
 
-import java.io.IOException;
 import java.util.*;
 
 /**
  * STOMP StompClient Class
- *
- *All STOMP protocol is exposed as methods of this class (`connect()`, `send()`, etc.)
+ * <p/>
+ * All STOMP protocol is exposed as methods of this class (`connect()`, `send()`, etc.)
  */
-public class StompClient {
+public class StompClient implements FrameHandler {
 
     private static class Heartbeat {
         int sx;
@@ -58,6 +57,7 @@ public class StompClient {
     private final String passcode;
 
     private NetSocket netSocket;
+    final FrameParser frameParser = new FrameParser(this);
 
     private static enum State {
         DISCONNECTED,
@@ -241,46 +241,17 @@ public class StompClient {
 
     private void init(NetSocket netSocket) {
         this.netSocket = netSocket;
-        final StompDecoder stompDecoder = new StompDecoder();
         // send heartbeat every 10s by default (value is in ms)
         heartbeat.sx = 10000;
         // expect to receive server heartbeat at least every 10s by default (value in ms)
         heartbeat.sy = 10000;
         // setup the handlers
         netSocket.dataHandler(new Handler<Buffer>() {
-            private ByteBuf read = null;
-
             @Override
             public void handle(Buffer buffer) {
 //                System.out.println("<<<" + buffer.toString("UTF-8").replaceAll("\0", "^@"));
                 serverActivity = System.currentTimeMillis();
-                // Should only get one callback at a time, no sychronization necessary
-                ByteBuf byteBuf = buffer.getByteBuf();
-
-                if (read != null) {
-                    // Merge the new buffer with the previous buffer
-                    byteBuf = Unpooled.copiedBuffer(read, byteBuf);
-                    read = null;
-                }
-
-                try {
-                    // Attempt to decode a full reply from the channelbuffer
-                    Frame receive = stompDecoder.receive(byteBuf);
-                    // If successful, grab the matching handler
-                    handleReply(receive);
-                    // May be more to read
-                    if (byteBuf.isReadable()) {
-                        // More than one message in the buffer, need to be careful
-                        handle(new Buffer(Unpooled.copiedBuffer(byteBuf)));
-                    }
-                } catch (IOException e) {
-                    logger.error("Error receiving data", e);
-                    disconnect();
-                } catch (IndexOutOfBoundsException th) {
-                    // Got to catch decoding fails and try it again
-                    byteBuf.resetReaderIndex();
-                    read = Unpooled.copiedBuffer(byteBuf);
-                }
+                frameParser.handle(buffer);
             }
         });
         // perform the connect command
@@ -347,11 +318,8 @@ public class StompClient {
         }
     }
 
-    void handleReply(Frame reply) throws IOException {
-        // Handles Pong
-        if( reply == null ) return;
-
-
+    @Override
+    public void handleFrame(Frame reply) {
         if ("ERROR".equals(reply.command)) {
             logger.error(reply.body);
             disconnect();
@@ -377,8 +345,9 @@ public class StompClient {
 
         }
 
-        System.out.println(reply.toJSON());
+//        System.out.println(reply.command);
+//        System.out.println(reply.toJSON());
 
-        throw new IOException("Received a non MESSAGE while in SUBSCRIBE mode");
+        throw new RuntimeException("Received a non MESSAGE while in SUBSCRIBE mode");
     }
 }

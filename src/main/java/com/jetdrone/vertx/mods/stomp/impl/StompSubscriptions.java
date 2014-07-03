@@ -1,5 +1,6 @@
-package com.jetdrone.vertx.mods.stomp;
+package com.jetdrone.vertx.mods.stomp.impl;
 
+import com.jetdrone.vertx.mods.stomp.Frame;
 import org.vertx.java.core.Handler;
 
 import java.util.HashMap;

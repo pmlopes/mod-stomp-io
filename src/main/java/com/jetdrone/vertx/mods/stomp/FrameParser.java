@@ -1,6 +1,6 @@
 package com.jetdrone.vertx.mods.stomp;
 
-import io.netty.buffer.ByteBuf;
+import com.jetdrone.vertx.mods.stomp.impl.FrameHandler;
 import org.vertx.java.core.Handler;
 import org.vertx.java.core.buffer.Buffer;
 
@@ -8,7 +8,7 @@ public class FrameParser implements Handler<Buffer> {
 
     private Buffer _buffer;
     private int _offset;
-    private final String _encoding = "utf-8";
+    private static final String _encoding = "utf-8";
 
     enum State {
         HEADERS,
@@ -16,16 +16,14 @@ public class FrameParser implements Handler<Buffer> {
         EOF
     }
 
-//    private final ReplyHandler client;
-//
-//    public FrameParser(ReplyHandler client) {
-//        this.client = client;
-//    }
+    private final FrameHandler client;
 
+    public FrameParser(FrameHandler client) {
+        this.client = client;
+    }
 
     private Frame parseResult() throws ArrayIndexOutOfBoundsException {
-        int start, end, offset;
-        int packetSize;
+        int start, end;
 
         State state = State.EOF;
         Frame frame = null;
@@ -59,6 +57,7 @@ public class FrameParser implements Handler<Buffer> {
                         }
                     } else {
                         if (frame != null) {
+                            //System.out.println("Switching to BODY parsing");
                             state = State.BODY;
                         }
                     }
@@ -82,125 +81,50 @@ public class FrameParser implements Handler<Buffer> {
                     } else {
                         start = _offset;
                         end = start + read;
-                    }
 
-                    body = _buffer.getString(start, end, _encoding);
+                        if (end >= _buffer.length()) {
+                            throw new ArrayIndexOutOfBoundsException("needs more data");
+                        }
+                    }
 
                     // include the delimiter
                     _offset = end + 1;
 
+                    body = _buffer.getString(start, end, _encoding);
+                    //System.out.println("Received body: " + body);
+
                     frame.body = body;
 
-                    //System.out.println("Read body: " + frame.body);
+                    //System.out.println("Switching to EOF parsing");
                     state = State.EOF;
                     break;
                 case EOF:
-                    if (read() == '\n') {
-                        //System.out.println("Skiping PONG");
-                        break;
+                    if ((_buffer.length() - _offset) > 0) {
+                        if (_buffer.getByte(_offset + 1) == '\n') {
+                            //System.out.println("Skiping PONG");
+                            _offset++;
+                            break;
+                        }
                     }
 
                     // There is more than 1 frame in this buffer
                     if (frame != null) {
-                        //System.out.println("Parse complete!");
+                        //System.out.println("Received a FRAME");
                         return frame;
                     }
 
+                    //System.out.println("Switching to HEADERS parsing");
                     state = State.HEADERS;
                     break;
-
             }
         }
 
-//        if (type == '+' || type == '-') {
-//            // up to the delimiter
-//            end = packetEndOffset() - 1;
-//            start = _offset;
-//
-//            // include the delimiter
-//            _offset = end + 2;
-//
-//            if (end > _buffer.length()) {
-//                _offset = start;
-//                throw new ArrayIndexOutOfBoundsException("Wait for more data.");
-//            }
-//
-//            if (type == '+') {
-//                return new Reply(type, _buffer.getString(start, end, _encoding));
-//            } else {
-//                return new Reply(type, _buffer.getString(start, end, _encoding));
-//            }
-//        } else if (type == ':') {
-//            // up to the delimiter
-//            end = packetEndOffset() - 1;
-//            start = _offset;
-//
-//            // include the delimiter
-//            _offset = end + 2;
-//
-//            if (end > _buffer.length()) {
-//                _offset = start;
-//                throw new ArrayIndexOutOfBoundsException("Wait for more data.");
-//            }
-//
-//            // return the coerced numeric value
-//            return new Reply(type, Long.parseLong(_buffer.getString(start, end)));
-//        } else if (type == '$') {
-//            // set a rewind point, as the packet could be larger than the
-//            // buffer in memory
-//            offset = _offset - 1;
-//
-//            packetSize = parsePacketSize();
-//
-//            // packets with a size of -1 are considered null
-//            if (packetSize == -1) {
-//                return new Reply(type, null);
-//            }
-//
-//            end = _offset + packetSize;
-//            start = _offset;
-//
-//            // set the offset to after the delimiter
-//            _offset = end + 2;
-//
-//            if (end > _buffer.length()) {
-//                _offset = offset;
-//                throw new ArrayIndexOutOfBoundsException("Wait for more data.");
-//            }
-//
-//            return new Reply(type, _buffer.getBuffer(start, end));
-//        } else if (type == '*') {
-//            offset = _offset;
-//            packetSize = parsePacketSize();
-//
-//            if (packetSize < 0) {
-//                return null;
-//            }
-//
-//            if (packetSize > bytesRemaining()) {
-//                _offset = offset - 1;
-//                throw new ArrayIndexOutOfBoundsException("Wait for more data.");
-//            }
-//
-//            Reply reply = new Reply(type, packetSize);
-//
-//            byte ntype;
-//            Reply res;
-//
-//            for (int i = 0; i < packetSize; i++) {
-//                ntype = _buffer.getByte(_offset++);
-//
-//                if (_offset > _buffer.length()) {
-//                    throw new ArrayIndexOutOfBoundsException("Wait for more data.");
-//                }
-//                res = parseResult(ntype);
-//                reply.set(i, res);
-//            }
-//
-//            return reply;
-//        }
+        // if the loop ended but the state was not EOF the we did not complete parsing the frame
+        if (state != State.EOF) {
+            throw new ArrayIndexOutOfBoundsException("need more data");
+        }
 
-        throw new RuntimeException("Unsupported message type");
+        return frame;
     }
 
     public void handle(Buffer buffer) {
@@ -210,16 +134,14 @@ public class FrameParser implements Handler<Buffer> {
         int offset;
 
         while (true) {
+            // set a rewind point. if a failure occurs,
+            // wait for the next handle()/append() and try again
             offset = _offset;
             try {
                 // at least 1 byte
-                if (bytesRemaining() < 1) {
+                if (bytesRemaining() == 0) {
                     break;
                 }
-
-                // set a rewind point. if a failure occurs,
-                // wait for the next handle()/append() and try again
-                offset = _offset - 1;
 
                 ret = parseResult();
 
@@ -227,7 +149,7 @@ public class FrameParser implements Handler<Buffer> {
                     break;
                 }
 
-//                client.handleReply(ret);
+                client.handleFrame(ret);
             } catch (ArrayIndexOutOfBoundsException err) {
                 // catch the error (not enough data), rewind, and wait
                 // for the next packet to appear
@@ -266,24 +188,6 @@ public class FrameParser implements Handler<Buffer> {
         _offset = 0;
     }
 
-    private int parsePacketSize() throws ArrayIndexOutOfBoundsException {
-        int end = packetEndOffset((byte) '\n');
-        String value = _buffer.getString(_offset, end - 1, _encoding);
-
-        _offset = end + 1;
-
-        long size = Long.parseLong(value);
-
-        if (size > Integer.MAX_VALUE) {
-            throw new RuntimeException("Cannot allocate more than " + Integer.MAX_VALUE + " bytes");
-        }
-
-        if (size < Integer.MIN_VALUE) {
-            throw new RuntimeException("Cannot allocate less than " + Integer.MIN_VALUE + " bytes");
-        }
-        return (int) size;
-    }
-
     private int packetEndOffset(byte delim) throws ArrayIndexOutOfBoundsException {
         int offset = _offset;
 
@@ -295,19 +199,10 @@ public class FrameParser implements Handler<Buffer> {
             }
         }
 
-        offset++;
         return offset;
     }
 
     private int bytesRemaining() {
         return (_buffer.length() - _offset) < 0 ? 0 : (_buffer.length() - _offset);
-    }
-
-    private byte read() {
-        if ((_buffer.length() - _offset) < 0) {
-            return -1;
-        }
-
-        return _buffer.getByte(_offset++);
     }
 }

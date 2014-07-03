@@ -5,7 +5,7 @@ import org.vertx.java.core.json.JsonObject;
 import java.util.HashMap;
 import java.util.Map;
 
-class Frame {
+public class Frame {
 
     final String command;
     final Map<String, String> headers = new HashMap<>();

@@ -1,5 +1,6 @@
 package com.jetdrone.vertx.mods.stomp;
 
+import com.jetdrone.vertx.mods.stomp.impl.StompSubscriptions;
 import org.vertx.java.busmods.BusModBase;
 import org.vertx.java.core.Handler;
 import org.vertx.java.core.eventbus.Message;
@@ -20,10 +21,10 @@ public class StompClientBusMod extends BusModBase implements Handler<Message<Jso
         return new UUID(RANDOM.nextLong(), RANDOM.nextLong()).toString();
     }
 
-    private static String getRequiredField(String name, Message<JsonObject> msg) throws StompFrameException {
+    private static String getRequiredField(String name, Message<JsonObject> msg) throws RuntimeException {
         String field = msg.body().getString(name);
         if (field == null) {
-            throw new StompFrameException("Field: <" + name + "> is required!");
+            throw new RuntimeException("Field: <" + name + "> is required!");
         }
         return field;
     }
@@ -203,8 +204,7 @@ public class StompClientBusMod extends BusModBase implements Handler<Message<Jso
                 default:
                     sendError(message, "Invalid command: " + command);
             }
-        } catch (StompFrameException ex) {
-            ex.printStackTrace();
+        } catch (RuntimeException ex) {
             sendError(message, ex.getMessage());
         }
     }
