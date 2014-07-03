@@ -17,7 +17,7 @@ Quick and Dirty Guide:
 First deploy the module:
 
     eb = vertx.eventBus()
-    container.deployModule('com.jetdrone~mod-stomp-io~1.0.0', [address: 'my-address'], 1)
+    container.deployModule('com.jetdrone~mod-stomp-io~1.1.1', [address: 'my-address'], 1)
 
 The config json accepts the following optional parameters:
 
