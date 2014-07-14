@@ -83,44 +83,44 @@ class LoadTest extends TestVerticle {
         }
     }
 
-    @Test
-    void testIssue7() {
-        final int total_messages = 20;
-        final String QUEUE = 'issue7'
-        int counter = 0;
-
-        ConnectionFactory factory = new ConnectionFactory()
-        factory.setHost("localhost")
-        Connection connection = factory.newConnection()
-        Channel channel = connection.createChannel()
-
-        // Create a new durable channel (if one doesn't already exist)
-        channel.queueDeclare(QUEUE, true, false, false, ['x-message-ttl': 2000])
-
-        channel.close();
-        connection.close();
-
-        eb.registerHandler("$address/queue/$QUEUE") { message ->
-            if (++counter == total_messages) {
-                testComplete()
-            }
-        }
-
-        eb.send(address, [command: 'subscribe', destination: "/amq/queue/$QUEUE"]) { reply0 ->
-
-            factory = new ConnectionFactory()
-            factory.setHost("localhost")
-            connection = factory.newConnection()
-            channel = connection.createChannel()
-
-            // Send nMessages messages
-            for (int msg = 1; msg <= total_messages; msg++) {
-                String message = "Hello World! " + msg
-                channel.basicPublish("", QUEUE, null, message.getBytes())
-            }
-
-            channel.close();
-            connection.close();
-        }
-    }
+//    @Test
+//    void testIssue7() {
+//        final int total_messages = 20;
+//        final String QUEUE = 'issue7'
+//        int counter = 0;
+//
+//        ConnectionFactory factory = new ConnectionFactory()
+//        factory.setHost("localhost")
+//        Connection connection = factory.newConnection()
+//        Channel channel = connection.createChannel()
+//
+//        // Create a new durable channel (if one doesn't already exist)
+//        channel.queueDeclare(QUEUE, true, false, false, ['x-message-ttl': 2000])
+//
+//        channel.close();
+//        connection.close();
+//
+//        eb.registerHandler("$address/queue/$QUEUE") { message ->
+//            if (++counter == total_messages) {
+//                testComplete()
+//            }
+//        }
+//
+//        eb.send(address, [command: 'subscribe', destination: "/amq/queue/$QUEUE"]) { reply0 ->
+//
+//            factory = new ConnectionFactory()
+//            factory.setHost("localhost")
+//            connection = factory.newConnection()
+//            channel = connection.createChannel()
+//
+//            // Send nMessages messages
+//            for (int msg = 1; msg <= total_messages; msg++) {
+//                String message = "Hello World! " + msg
+//                channel.basicPublish("", QUEUE, null, message.getBytes())
+//            }
+//
+//            channel.close();
+//            connection.close();
+//        }
+//    }
 }
