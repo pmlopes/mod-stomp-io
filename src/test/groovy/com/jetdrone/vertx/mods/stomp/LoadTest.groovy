@@ -36,15 +36,23 @@ class LoadTest extends TestVerticle {
         })
     }
 
-    private static void generate(int nMessages) throws IOException {
+    void stop() {
+        super.stop()
+        ConnectionFactory factory = new ConnectionFactory()
+        factory.setHost("localhost")
+        Connection connection = factory.newConnection()
+        Channel channel = connection.createChannel()
+        channel.queueDelete(QUEUE_NAME)
+    }
 
+    private static void generate(int nMessages, Map arguments) throws IOException {
         ConnectionFactory factory = new ConnectionFactory()
         factory.setHost("localhost")
         Connection connection = factory.newConnection()
         Channel channel = connection.createChannel()
 
         // Create a new durable channel (if one doesn't already exist)
-        channel.queueDeclare(QUEUE_NAME, true, false, false, null)
+        channel.queueDeclare(QUEUE_NAME, true, false, false, arguments)
 
         // Send nMessages messages
         for (int msg = 1; msg <= nMessages; msg++) {
@@ -69,7 +77,23 @@ class LoadTest extends TestVerticle {
         }
 
         eb.send(address, [command: 'subscribe', destination: "/queue/tims_test_queue"]) { reply0 ->
-            generate(total_messages)
+            generate(total_messages, null)
+        }
+    }
+
+    @Test
+    void testIssue7() {
+        final int total_messages = 20;
+        int counter = 0;
+
+        eb.registerHandler("$address/queue/$QUEUE_NAME") { message ->
+            if (++counter == total_messages) {
+                testComplete()
+            }
+        }
+
+        eb.send(address, [command: 'subscribe', destination: "/queue/tims_test_queue", headers: ['x-message-ttl': 2000]]) { reply0 ->
+            generate(total_messages, ['x-message-ttl': 2000])
         }
     }
 }
