@@ -43,6 +43,8 @@ class LoadTest extends TestVerticle {
         Connection connection = factory.newConnection()
         Channel channel = connection.createChannel()
         channel.queueDelete(QUEUE_NAME)
+        channel.close();
+        connection.close();
     }
 
     private static void generate(int nMessages, Map arguments) throws IOException {
@@ -84,16 +86,41 @@ class LoadTest extends TestVerticle {
     @Test
     void testIssue7() {
         final int total_messages = 20;
+        final String QUEUE = 'issue7'
         int counter = 0;
 
-        eb.registerHandler("$address/queue/$QUEUE_NAME") { message ->
+        ConnectionFactory factory = new ConnectionFactory()
+        factory.setHost("localhost")
+        Connection connection = factory.newConnection()
+        Channel channel = connection.createChannel()
+
+        // Create a new durable channel (if one doesn't already exist)
+        channel.queueDeclare(QUEUE, true, false, false, ['x-message-ttl': 2000])
+
+        channel.close();
+        connection.close();
+
+        eb.registerHandler("$address/queue/$QUEUE") { message ->
             if (++counter == total_messages) {
                 testComplete()
             }
         }
 
-        eb.send(address, [command: 'subscribe', destination: "/queue/tims_test_queue", headers: ['x-message-ttl': 2000]]) { reply0 ->
-            generate(total_messages, ['x-message-ttl': 2000])
+        eb.send(address, [command: 'subscribe', destination: "/queue/$QUEUE", headers: ['x-message-ttl': 2000]]) { reply0 ->
+
+            factory = new ConnectionFactory()
+            factory.setHost("localhost")
+            connection = factory.newConnection()
+            channel = connection.createChannel()
+
+            // Send nMessages messages
+            for (int msg = 1; msg <= total_messages; msg++) {
+                String message = "Hello World! " + msg
+                channel.basicPublish("", QUEUE, null, message.getBytes())
+            }
+
+            channel.close();
+            connection.close();
         }
     }
 }
