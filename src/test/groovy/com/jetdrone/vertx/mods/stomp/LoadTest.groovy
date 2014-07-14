@@ -52,6 +52,12 @@ class LoadTest extends TestVerticle {
         Channel channel = connection.createChannel()
 
         // Create a new durable channel (if one doesn't already exist)
+        try {
+            channel.queueDelete(QUEUE_NAME)
+        } catch (Exception e) {
+            // ignore,..
+        }
+
         channel.queueDeclare(QUEUE_NAME, true, false, false, arguments)
 
         // Send nMessages messages
