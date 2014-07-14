@@ -83,7 +83,10 @@ public class StompClientBusMod extends BusModBase implements Handler<Message<Jso
                     headers = message.body().getObject("headers");
                     if (headers != null) {
                         for (String header : headers.getFieldNames()) {
-                            frame.headers.put(header, headers.getString(header));
+                            Object value = headers.getValue(header);
+                            if (value != null) {
+                                frame.headers.put(header, value.toString());
+                            }
                         }
                     }
 
@@ -134,7 +137,10 @@ public class StompClientBusMod extends BusModBase implements Handler<Message<Jso
                     headers = message.body().getObject("headers");
                     if (headers != null) {
                         for (String header : headers.getFieldNames()) {
-                            frame.headers.put(header, headers.getString(header));
+                            Object value = headers.getValue(header);
+                            if (value != null) {
+                                frame.headers.put(header, value.toString());
+                            }
                         }
                     }
 
