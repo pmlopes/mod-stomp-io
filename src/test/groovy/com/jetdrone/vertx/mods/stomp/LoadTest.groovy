@@ -106,7 +106,7 @@ class LoadTest extends TestVerticle {
             }
         }
 
-        eb.send(address, [command: 'subscribe', destination: "/queue/$QUEUE", headers: ['x-message-ttl': 2000]]) { reply0 ->
+        eb.send(address, [command: 'subscribe', destination: "/queue/$QUEUE"]) { reply0 ->
 
             factory = new ConnectionFactory()
             factory.setHost("localhost")
