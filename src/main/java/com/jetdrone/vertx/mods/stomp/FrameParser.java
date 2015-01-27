@@ -22,7 +22,7 @@ public class FrameParser implements Handler<Buffer> {
         this.client = client;
     }
 
-    private Frame parseResult() throws ArrayIndexOutOfBoundsException {
+    private Frame parseResult() throws IndexOutOfBoundsException {
         int start, end;
 
         State state = State.EOF;
@@ -150,7 +150,7 @@ public class FrameParser implements Handler<Buffer> {
                 }
 
                 client.handleFrame(ret);
-            } catch (ArrayIndexOutOfBoundsException err) {
+            } catch (IndexOutOfBoundsException err) {
                 // catch the error (not enough data), rewind, and wait
                 // for the next packet to appear
                 _offset = offset;
