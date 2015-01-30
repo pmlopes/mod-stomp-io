@@ -109,9 +109,13 @@ public class StompClientBusMod extends BusModBase implements Handler<Message<Jso
                         frame.headers.put("receipt", generateID());
                         stompClient.send(frame, false, new Handler<Frame>() {
                             @Override
-                            public void handle(Frame frame) {
-                                // should also include the id in the response
-                                sendOK(message, new JsonObject().putString("receipt", frame.headers.get("receipt-id")));
+                            public void handle(Frame event) {
+                                if ("ERROR".equals(event.command)) {
+                                    sendError(message, event.body);
+                                } else {
+                                    // should also include the id in the response
+                                    sendOK(message, new JsonObject().putString("receipt", event.headers.get("receipt-id")));
+                                }
                             }
                         });
 
@@ -119,7 +123,11 @@ public class StompClientBusMod extends BusModBase implements Handler<Message<Jso
                         stompClient.send(frame, true, new Handler<Frame>() {
                             @Override
                             public void handle(Frame event) {
-                                sendOK(message, null);
+                                if ("ERROR".equals(event.command)) {
+                                    sendError(message, event.body);
+                                } else {
+                                    sendOK(message, null);
+                                }
                             }
                         });
                     }
@@ -159,6 +167,7 @@ public class StompClientBusMod extends BusModBase implements Handler<Message<Jso
                     stompClient.send(frame, true, new Handler<Frame>() {
                         @Override
                         public void handle(Frame event) {
+                            // TODO: Check errors
                             sendOK(message, new JsonObject().putString("id", subscribeId));
                         }
                     });
@@ -169,6 +178,7 @@ public class StompClientBusMod extends BusModBase implements Handler<Message<Jso
                     stompClient.send(frame, true, new Handler<Frame>() {
                         @Override
                         public void handle(Frame event) {
+                            // TODO: Check errors
                             stompSubscriptions.unregisterSubscribeHandler(unsubscribeId);
                             sendOK(message);
                         }
@@ -182,6 +192,7 @@ public class StompClientBusMod extends BusModBase implements Handler<Message<Jso
                     stompClient.send(frame, true, new Handler<Frame>() {
                         @Override
                         public void handle(Frame event) {
+                            // TODO: Check errors
                             sendOK(message, null);
                         }
                     });
@@ -193,6 +204,7 @@ public class StompClientBusMod extends BusModBase implements Handler<Message<Jso
                     stompClient.send(frame, true, new Handler<Frame>() {
                         @Override
                         public void handle(Frame event) {
+                            // TODO: Check errors
                             sendOK(message, new JsonObject().putString("transaction", frame.headers.get("transaction")));
                         }
                     });
@@ -203,6 +215,7 @@ public class StompClientBusMod extends BusModBase implements Handler<Message<Jso
                     stompClient.send(frame, true, new Handler<Frame>() {
                         @Override
                         public void handle(Frame event) {
+                            // TODO: Check errors
                             sendOK(message, null);
                         }
                     });
